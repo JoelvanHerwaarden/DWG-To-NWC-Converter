@@ -46,6 +46,7 @@ public sealed class ConversionService
             Directory.CreateDirectory(tempInputFolder);
             Directory.CreateDirectory(tempOutputFolder);
 
+            Report($"Workspace: {tempWorkspacePath}", messages, progress);
             Report(
                 $"Found {dwgFiles.Length} DWG files. Copying them to temporary workspace: {tempWorkspacePath}",
                 messages,
@@ -54,7 +55,7 @@ public sealed class ConversionService
             var stagedFiles = await StageInputFilesAsync(dwgFiles, tempInputFolder, cancellationToken);
 
             Report(
-                $"Starting parallel Navisworks conversion in temp workspace with max parallelism {Math.Max(1, settings.MaxParallelism)}.",
+                $"Starting one Navisworks batch conversion in temp workspace for {stagedFiles.Length} files.",
                 messages,
                 progress);
 
@@ -62,7 +63,6 @@ public sealed class ConversionService
                 settings.ToolPath,
                 stagedFiles,
                 tempOutputFolder,
-                settings.MaxParallelism,
                 cancellationToken,
                 messages,
                 progress);
@@ -143,79 +143,98 @@ public sealed class ConversionService
         string toolPath,
         IReadOnlyList<string> stagedDwgFiles,
         string tempOutputFolder,
-        int maxParallelism,
         CancellationToken cancellationToken,
         ConcurrentQueue<string> messages,
         IProgress<string>? progress)
     {
-        var parallelOptions = new ParallelOptions
-        {
-            MaxDegreeOfParallelism = Math.Max(1, maxParallelism),
-            CancellationToken = cancellationToken
-        };
-
-        await Parallel.ForEachAsync(
-            stagedDwgFiles,
-            parallelOptions,
-            async (stagedDwgFilePath, ct) =>
-            {
-                var attempt = await ConvertSingleFileAsync(toolPath, stagedDwgFilePath, tempOutputFolder, ct);
-
-                foreach (var message in attempt.Messages)
-                {
-                    Report(message, messages, progress);
-                }
-            });
-    }
-
-    private static async Task<ConversionAttemptResult> ConvertSingleFileAsync(
-        string toolPath,
-        string stagedDwgFilePath,
-        string tempOutputFolder,
-        CancellationToken cancellationToken)
-    {
-        var sourceFileName = Path.GetFileName(stagedDwgFilePath);
-        var stagedOutputFilePath = BuildOutputFilePath(stagedDwgFilePath, tempOutputFolder);
-        var stagedInputNwcFilePath = BuildOutputFilePath(
-            stagedDwgFilePath,
-            Path.GetDirectoryName(stagedDwgFilePath) ?? tempOutputFolder);
-        var inputListPath = Path.Combine(
-            Path.GetDirectoryName(stagedDwgFilePath) ?? tempOutputFolder,
-            $"{Path.GetFileNameWithoutExtension(stagedDwgFilePath)}.txt");
+        var inputListPath = Path.Combine(tempOutputFolder, "batch-input.txt");
+        var tempInputFolder = Path.GetDirectoryName(stagedDwgFiles[0]) ?? tempOutputFolder;
 
         try
         {
-            await File.WriteAllTextAsync(
+            await File.WriteAllLinesAsync(
                 inputListPath,
-                $"{stagedDwgFilePath}{Environment.NewLine}",
+                stagedDwgFiles,
                 cancellationToken);
+
+            Report(
+                $"Starting: batch conversion for {stagedDwgFiles.Count} files.",
+                messages,
+                progress);
 
             var startInfo = CreateStartInfo(toolPath, inputListPath, tempOutputFolder);
             using var process = StartConversionProcess(startInfo);
+            using var watcherCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var watcherTask = MonitorOutputFilesAsync(
+                stagedDwgFiles,
+                tempInputFolder,
+                tempOutputFolder,
+                messages,
+                progress,
+                watcherCancellation.Token);
             var execution = await WaitForCompletionAsync(process, cancellationToken);
+            watcherCancellation.Cancel();
+            await watcherTask;
 
-            var actualOutputFilePath = ResolveActualOutputFilePath(stagedInputNwcFilePath, stagedOutputFilePath);
-
-            if (execution.ExitCode == 0 && actualOutputFilePath is not null)
+            foreach (var message in BuildBatchExecutionMessages(stagedDwgFiles, tempOutputFolder, execution))
             {
-                return BuildSuccessResult(sourceFileName, actualOutputFilePath, execution);
+                Report(message, messages, progress);
             }
-
-            return BuildFailureResult(sourceFileName, stagedInputNwcFilePath, execution);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            return new ConversionAttemptResult(
-                false,
-                new[]
-                {
-                    $"Starting: {sourceFileName} -> {Path.GetFileName(stagedInputNwcFilePath)}",
-                    $"Failed: {sourceFileName} | {ex.Message}"
-                });
+            Report($"Failed: Batch conversion | {ex.Message}", messages, progress);
         }
         finally
         {
             TryDeleteFile(inputListPath);
+        }
+    }
+
+    private static async Task MonitorOutputFilesAsync(
+        IReadOnlyList<string> stagedDwgFiles,
+        string tempInputFolder,
+        string tempOutputFolder,
+        ConcurrentQueue<string> messages,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken)
+    {
+        var knownOutputs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                ReportNewOutputs(stagedDwgFiles, tempInputFolder, tempOutputFolder, knownOutputs, messages, progress);
+                await Task.Delay(500, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            ReportNewOutputs(stagedDwgFiles, tempInputFolder, tempOutputFolder, knownOutputs, messages, progress);
+        }
+    }
+
+    private static void ReportNewOutputs(
+        IReadOnlyList<string> stagedDwgFiles,
+        string tempInputFolder,
+        string tempOutputFolder,
+        HashSet<string> knownOutputs,
+        ConcurrentQueue<string> messages,
+        IProgress<string>? progress)
+    {
+        foreach (var stagedDwgFilePath in stagedDwgFiles)
+        {
+            var outputFilePath = ResolveActualOutputFilePath(
+                BuildOutputFilePath(stagedDwgFilePath, tempInputFolder),
+                BuildOutputFilePath(stagedDwgFilePath, tempOutputFolder));
+
+            if (outputFilePath is null || !knownOutputs.Add(outputFilePath))
+            {
+                continue;
+            }
+
+            Report($"Detected: {Path.GetFileName(outputFilePath)}", messages, progress);
         }
     }
 
@@ -273,6 +292,7 @@ public sealed class ConversionService
             FileName = toolPath,
             UseShellExecute = false,
             CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             WorkingDirectory = Path.GetDirectoryName(toolPath) ?? AppContext.BaseDirectory
@@ -310,51 +330,45 @@ public sealed class ConversionService
             standardError.Trim());
     }
 
-    private static ConversionAttemptResult BuildSuccessResult(
-        string sourceFileName,
-        string outputFilePath,
+    private static List<string> BuildBatchExecutionMessages(
+        IReadOnlyList<string> stagedDwgFiles,
+        string tempOutputFolder,
         ProcessExecutionResult execution)
     {
-        var messages = BuildExecutionMessages(sourceFileName, outputFilePath, execution);
-        messages.Add($"Done: {Path.GetFileName(outputFilePath)}");
-        return new ConversionAttemptResult(true, messages);
-    }
-
-    private static ConversionAttemptResult BuildFailureResult(
-        string sourceFileName,
-        string outputFilePath,
-        ProcessExecutionResult execution)
-    {
-        var messages = BuildExecutionMessages(sourceFileName, outputFilePath, execution);
-
-        var failureReason = new StringBuilder()
-            .Append($"Failed ({execution.ExitCode}): {sourceFileName}")
-            .Append(File.Exists(outputFilePath) ? string.Empty : " | Output file was not created.")
-            .Append(ToolPrintedUsage(execution) ? " | FileToolsTaskRunner rejected the command-line arguments." : string.Empty)
-            .ToString();
-
-        messages.Add(failureReason);
-        return new ConversionAttemptResult(false, messages);
-    }
-
-    private static List<string> BuildExecutionMessages(
-        string sourceFileName,
-        string outputFilePath,
-        ProcessExecutionResult execution)
-    {
-        var messages = new List<string>
-        {
-            $"Starting: {sourceFileName} -> {Path.GetFileName(outputFilePath)}"
-        };
+        var messages = new List<string>();
 
         if (!string.IsNullOrWhiteSpace(execution.StandardOutput))
         {
-            messages.Add($"Output [{sourceFileName}]: {execution.StandardOutput}");
+            messages.Add($"Output [batch]: {execution.StandardOutput}");
         }
 
         if (!string.IsNullOrWhiteSpace(execution.StandardError))
         {
-            messages.Add($"Error [{sourceFileName}]: {execution.StandardError}");
+            messages.Add($"Error [batch]: {execution.StandardError}");
+        }
+
+        foreach (var stagedDwgFilePath in stagedDwgFiles)
+        {
+            var stagedOutputFilePath = BuildOutputFilePath(stagedDwgFilePath, tempOutputFolder);
+            var stagedInputNwcFilePath = BuildOutputFilePath(
+                stagedDwgFilePath,
+                Path.GetDirectoryName(stagedDwgFilePath) ?? tempOutputFolder);
+            var actualOutputFilePath = ResolveActualOutputFilePath(stagedInputNwcFilePath, stagedOutputFilePath);
+            var sourceFileName = Path.GetFileName(stagedDwgFilePath);
+
+            if (actualOutputFilePath is not null)
+            {
+                messages.Add($"Done: {Path.GetFileName(actualOutputFilePath)}");
+                continue;
+            }
+
+            var failureReason = new StringBuilder()
+                .Append($"Failed ({execution.ExitCode}): {sourceFileName}")
+                .Append(" | Output file was not created.")
+                .Append(ToolPrintedUsage(execution) ? " | FileToolsTaskRunner rejected the command-line arguments." : string.Empty)
+                .ToString();
+
+            messages.Add(failureReason);
         }
 
         return messages;
@@ -428,8 +442,6 @@ public sealed class ConversionService
         messages.Enqueue(message);
         progress?.Report(message);
     }
-
-    private sealed record ConversionAttemptResult(bool Succeeded, IReadOnlyList<string> Messages);
 
     private sealed record ProcessExecutionResult(
         int ExitCode,

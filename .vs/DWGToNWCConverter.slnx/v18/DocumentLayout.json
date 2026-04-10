@@ -46,8 +46,7 @@
               "RelativeToolTip": "ConversionService.cs",
               "ViewState": "AgIAAHEAAAAAAAAAAAAmwLkAAAALAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-10T10:38:24.274Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-10T10:38:24.274Z"
             },
             {
               "$type": "Document",
@@ -59,8 +58,7 @@
               "RelativeToolTip": "MainWindow.xaml.cs",
               "ViewState": "AgIAAEUAAAAAAAAAAAAIwFwAAAA0AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-10T10:37:58.94Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-10T10:37:58.94Z"
             },
             {
               "$type": "Document",
@@ -68,8 +66,8 @@
               "Title": "MainWindow.xaml",
               "DocumentMoniker": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\MainWindow.xaml",
               "RelativeDocumentMoniker": "MainWindow.xaml",
-              "ToolTip": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\MainWindow.xaml",
-              "RelativeToolTip": "MainWindow.xaml",
+              "ToolTip": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\MainWindow.xaml*",
+              "RelativeToolTip": "MainWindow.xaml*",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
               "WhenOpened": "2026-04-10T09:21:41.835Z",
               "EditorCaption": ""

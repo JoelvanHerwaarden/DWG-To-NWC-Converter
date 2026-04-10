@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interop;
 using Forms = System.Windows.Forms;
 
 namespace DWGToNWCConverter;
@@ -13,7 +12,6 @@ public partial class MainWindow : Window
     private readonly ConversionService _conversionService = new();
     private readonly TaskSchedulerService _taskSchedulerService = new();
     private bool _isBusy;
-    private bool _isApplyingCenteredMaximize;
     private CancellationTokenSource? _runCancellationTokenSource;
     private int _currentBatchTotal;
     private int _currentBatchCompleted;
@@ -24,33 +22,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         SourceInitialized += (_, _) => WindowThemeHelper.ApplyTheme(this);
         LoadSettingsIntoUi();
-        Loaded += MainWindow_Loaded;
-        StateChanged += MainWindow_StateChanged;
-    }
-
-    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
-    {
-        CenterWindowOnCurrentScreen();
-        await RefreshSchedulerStatusAsync();
-    }
-
-    private void MainWindow_StateChanged(object? sender, EventArgs e)
-    {
-        if (_isApplyingCenteredMaximize)
-        {
-            return;
-        }
-
-        if (WindowState == WindowState.Maximized)
-        {
-            ApplyCenteredMaximize();
-            return;
-        }
-
-        if (WindowState == WindowState.Normal && IsLoaded)
-        {
-            CenterWindowOnCurrentScreen();
-        }
+        Loaded += async (_, _) => await RefreshSchedulerStatusAsync();
     }
 
     private void LoadSettingsIntoUi()
@@ -65,8 +37,6 @@ public partial class MainWindow : Window
         SameAsInputCheckBox.IsChecked = settings.UseInputFolderAsOutput;
         TaskNameTextBox.Text = settings.ScheduledTaskName;
         ScheduledTimeTextBox.Text = settings.ScheduledTime;
-
-        SelectComboBoxItem(ParallelismComboBox, settings.MaxParallelism.ToString());
         SelectComboBoxItem(ScheduledDayComboBox, settings.ScheduledDay);
         ApplyOutputFolderState();
     }
@@ -93,8 +63,6 @@ public partial class MainWindow : Window
             var result = await _conversionService.RunBatchAsync(settings, _runCancellationTokenSource.Token, progress);
 
             SetProgressState(result.TotalFiles, result.ConvertedFiles + _currentBatchFailed);
-            SummaryTextBlock.Text =
-                $"Converted {result.ConvertedFiles} of {result.TotalFiles} DWG files to NWC.";
             ProgressTextBlock.Text =
                 result.TotalFiles == 0
                     ? "No DWG files were found."
@@ -103,13 +71,11 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            SummaryTextBlock.Text = "Conversion cancelled.";
             ProgressTextBlock.Text = "Conversion cancelled.";
             Log("Conversion cancelled.");
         }
         catch (Exception ex)
         {
-            SummaryTextBlock.Text = "Conversion failed.";
             ProgressTextBlock.Text = "Conversion failed.";
             Log(ex.Message);
             System.Windows.MessageBox.Show(this, ex.Message, "Conversion error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -129,7 +95,6 @@ public partial class MainWindow : Window
         {
             var settings = ReadSettingsFromUi();
             SettingsService.Save(settings);
-            SummaryTextBlock.Text = "Settings saved successfully.";
             Log("Settings saved.");
         }
         catch (Exception ex)
@@ -288,13 +253,11 @@ public partial class MainWindow : Window
         var logText = GetAllLogText();
         if (string.IsNullOrWhiteSpace(logText))
         {
-            SummaryTextBlock.Text = "There are no log entries to copy.";
             Log("Copy log skipped. No log entries available.");
             return;
         }
 
         System.Windows.Clipboard.SetText(logText);
-        SummaryTextBlock.Text = "Activity log copied to clipboard.";
         Log("Copied all activity log entries to the clipboard.");
     }
 
@@ -318,7 +281,6 @@ public partial class MainWindow : Window
 
     private AppSettings ReadSettingsFromUi()
     {
-        var parallelText = (ParallelismComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "4";
         var scheduledDay = (ScheduledDayComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "FRI";
 
         if (!TimeOnly.TryParse(ScheduledTimeTextBox.Text, out var scheduledTime))
@@ -332,7 +294,7 @@ public partial class MainWindow : Window
             OutputFolder = OutputFolderTextBox.Text.Trim(),
             UseInputFolderAsOutput = SameAsInputCheckBox.IsChecked == true,
             ToolPath = ToolPathTextBox.Text.Trim(),
-            MaxParallelism = int.Parse(parallelText),
+            MaxParallelism = 1,
             ScheduledTaskName = string.IsNullOrWhiteSpace(TaskNameTextBox.Text)
                 ? "DWGToNWCConverterBiWeekly"
                 : TaskNameTextBox.Text.Trim(),
@@ -408,9 +370,6 @@ public partial class MainWindow : Window
 
         if (message.StartsWith("Done:", StringComparison.OrdinalIgnoreCase))
         {
-            _currentBatchCompleted++;
-            SetProgressState(_currentBatchTotal, _currentBatchCompleted + _currentBatchFailed);
-            ProgressTextBlock.Text = BuildProgressText();
             Log(message);
             return;
         }
@@ -420,6 +379,22 @@ public partial class MainWindow : Window
             _currentBatchFailed++;
             SetProgressState(_currentBatchTotal, _currentBatchCompleted + _currentBatchFailed);
             ProgressTextBlock.Text = BuildProgressText();
+            Log(message);
+            return;
+        }
+
+        if (message.StartsWith("Detected:", StringComparison.OrdinalIgnoreCase))
+        {
+            _currentBatchCompleted++;
+            SetProgressState(_currentBatchTotal, _currentBatchCompleted + _currentBatchFailed);
+            ProgressTextBlock.Text = BuildProgressText();
+            Log(message);
+            return;
+        }
+
+        if (message.StartsWith("Workspace:", StringComparison.OrdinalIgnoreCase) ||
+            message.StartsWith("Starting:", StringComparison.OrdinalIgnoreCase))
+        {
             Log(message);
             return;
         }
@@ -446,8 +421,8 @@ public partial class MainWindow : Window
             return "Conversion in progress...";
         }
 
-        return $"Processed {_currentBatchCompleted + _currentBatchFailed} of {_currentBatchTotal} files. " +
-               $"{_currentBatchCompleted} converted, {_currentBatchFailed} failed.";
+        return $"Detected {_currentBatchCompleted} of {_currentBatchTotal} output files. " +
+               $"{_currentBatchFailed} missing or failed.";
     }
 
     private static int ExtractFirstInteger(string message)
@@ -503,47 +478,4 @@ public partial class MainWindow : Window
 
     private static bool IsReadyStatus(string statusText) =>
         string.Equals(statusText?.Trim(), "Ready", StringComparison.OrdinalIgnoreCase);
-
-    private void ApplyCenteredMaximize()
-    {
-        try
-        {
-            _isApplyingCenteredMaximize = true;
-
-            var screen = GetCurrentScreen();
-            var workArea = screen.WorkingArea;
-            var targetWidth = Math.Min(MaxWidth, workArea.Width);
-            var targetHeight = Math.Min(Math.Max(Height, MinHeight), workArea.Height);
-
-            WindowState = WindowState.Normal;
-            Width = targetWidth;
-            Height = targetHeight;
-            Left = workArea.Left + ((workArea.Width - targetWidth) / 2d);
-            Top = workArea.Top + ((workArea.Height - targetHeight) / 2d);
-        }
-        finally
-        {
-            _isApplyingCenteredMaximize = false;
-        }
-    }
-
-    private void CenterWindowOnCurrentScreen()
-    {
-        var screen = GetCurrentScreen();
-        var workArea = screen.WorkingArea;
-        var targetWidth = double.IsNaN(Width) ? ActualWidth : Width;
-        var targetHeight = double.IsNaN(Height) ? ActualHeight : Height;
-
-        targetWidth = Math.Min(targetWidth, workArea.Width);
-        targetHeight = Math.Min(targetHeight, workArea.Height);
-
-        Left = workArea.Left + ((workArea.Width - targetWidth) / 2d);
-        Top = workArea.Top + ((workArea.Height - targetHeight) / 2d);
-    }
-
-    private Forms.Screen GetCurrentScreen()
-    {
-        var handle = new WindowInteropHelper(this).Handle;
-        return handle != IntPtr.Zero ? Forms.Screen.FromHandle(handle) : Forms.Screen.PrimaryScreen;
-    }
 }

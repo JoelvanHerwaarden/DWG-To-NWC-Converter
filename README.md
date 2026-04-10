@@ -81,15 +81,16 @@ Use the left-hand panel to configure the conversion:
    `Save NWC files into Folder A` writes results into the input folder.
    If that is unchecked, set `Folder B: NWC output` to a separate destination.
 3. Confirm or browse to `Navisworks FiletoolsTaskRunner.exe`.
-4. Choose `Parallel conversions`.
-5. Click `Run Conversion Now`.
+4. Click `Run Conversion Now`.
 
 What happens during a manual run:
 
 - the app validates the configured folders and Navisworks tool path
 - it scans the input folder for `*.dwg` files in the top-level directory only
-- it starts one Navisworks conversion process per DWG file
-- it limits concurrency using the selected parallelism value
+- it stages the DWG files into a temporary workspace
+- it writes one batch input text file that lists all staged DWG files
+- it starts one `FiletoolsTaskRunner.exe` process for that full batch
+- it watches the temporary workspace and updates progress as `.nwc` files appear
 - it logs success or failure per file in the activity log
 - it updates the summary box with the final converted count
 
@@ -135,7 +136,7 @@ When the app starts with `--run-scheduled`:
 
 ### Where scheduled settings come from
 
-Scheduled runs always use the saved settings file, not unsaved UI changes. If you change any folder, tool path, task name, day, time, or parallelism, save or recreate the schedule so the automation uses the latest values.
+Scheduled runs always use the saved settings file, not unsaved UI changes. If you change any folder, tool path, task name, day, or time, save or recreate the schedule so the automation uses the latest values.
 
 ## <img src="docs/icons/settings.svg" alt="" width="22" valign="middle" /> Settings And Storage
 
@@ -151,7 +152,6 @@ The saved settings include:
 - output folder
 - whether the input folder is also the output folder
 - Navisworks tool path
-- max parallelism
 - scheduled task name
 - scheduled day
 - scheduled time
