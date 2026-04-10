@@ -1,5 +1,6 @@
 using System.IO;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -13,6 +14,10 @@ public partial class MainWindow : Window
     private readonly TaskSchedulerService _taskSchedulerService = new();
     private bool _isBusy;
     private bool _isApplyingCenteredMaximize;
+    private CancellationTokenSource? _runCancellationTokenSource;
+    private int _currentBatchTotal;
+    private int _currentBatchCompleted;
+    private int _currentBatchFailed;
 
     public MainWindow()
     {
@@ -81,22 +86,38 @@ public partial class MainWindow : Window
             var settings = ReadSettingsFromUi();
             SettingsService.Save(settings);
 
+            _runCancellationTokenSource = new CancellationTokenSource();
+            ResetProgressState();
             Log($"Starting conversion for {settings.InputFolder}");
-            var progress = new Progress<string>(Log);
-            var result = await _conversionService.RunBatchAsync(settings, CancellationToken.None, progress);
+            var progress = new Progress<string>(HandleConversionProgress);
+            var result = await _conversionService.RunBatchAsync(settings, _runCancellationTokenSource.Token, progress);
 
+            SetProgressState(result.TotalFiles, result.ConvertedFiles + _currentBatchFailed);
             SummaryTextBlock.Text =
                 $"Converted {result.ConvertedFiles} of {result.TotalFiles} DWG files to NWC.";
+            ProgressTextBlock.Text =
+                result.TotalFiles == 0
+                    ? "No DWG files were found."
+                    : $"Finished. {result.ConvertedFiles} converted, {_currentBatchFailed} failed.";
             Log($"Batch complete. {result.ConvertedFiles}/{result.TotalFiles} converted.");
+        }
+        catch (OperationCanceledException)
+        {
+            SummaryTextBlock.Text = "Conversion cancelled.";
+            ProgressTextBlock.Text = "Conversion cancelled.";
+            Log("Conversion cancelled.");
         }
         catch (Exception ex)
         {
             SummaryTextBlock.Text = "Conversion failed.";
+            ProgressTextBlock.Text = "Conversion failed.";
             Log(ex.Message);
             System.Windows.MessageBox.Show(this, ex.Message, "Conversion error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
+            _runCancellationTokenSource?.Dispose();
+            _runCancellationTokenSource = null;
             _isBusy = false;
             ToggleBusyState();
         }
@@ -262,6 +283,21 @@ public partial class MainWindow : Window
         LogListBox.Items.Clear();
     }
 
+    private void CopyAllLogButton_Click(object sender, RoutedEventArgs e)
+    {
+        var logText = GetAllLogText();
+        if (string.IsNullOrWhiteSpace(logText))
+        {
+            SummaryTextBlock.Text = "There are no log entries to copy.";
+            Log("Copy log skipped. No log entries available.");
+            return;
+        }
+
+        System.Windows.Clipboard.SetText(logText);
+        SummaryTextBlock.Text = "Activity log copied to clipboard.";
+        Log("Copied all activity log entries to the clipboard.");
+    }
+
     private void CloseAppButton_Click(object sender, RoutedEventArgs e)
     {
         Close();
@@ -326,6 +362,101 @@ public partial class MainWindow : Window
     {
         RunNowButton.IsEnabled = !_isBusy;
         RunNowButton.Content = _isBusy ? "Running..." : "Run Conversion Now";
+        CancelRunButton.IsEnabled = _isBusy;
+    }
+
+    private void CancelRunButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_isBusy || _runCancellationTokenSource is null || _runCancellationTokenSource.IsCancellationRequested)
+        {
+            return;
+        }
+
+        _runCancellationTokenSource.Cancel();
+        ProgressTextBlock.Text = "Cancelling conversion...";
+        Log("Cancellation requested.");
+    }
+
+    private void ResetProgressState()
+    {
+        _currentBatchTotal = 0;
+        _currentBatchCompleted = 0;
+        _currentBatchFailed = 0;
+        ConversionProgressBar.Maximum = 1;
+        ConversionProgressBar.Value = 0;
+        ProgressTextBlock.Text = "Preparing conversion batch...";
+    }
+
+    private void SetProgressState(int totalFiles, int processedFiles)
+    {
+        _currentBatchTotal = Math.Max(0, totalFiles);
+        ConversionProgressBar.Maximum = Math.Max(1, _currentBatchTotal);
+        ConversionProgressBar.Value = Math.Min(processedFiles, ConversionProgressBar.Maximum);
+    }
+
+    private void HandleConversionProgress(string message)
+    {
+        if (message.StartsWith("Found ", StringComparison.OrdinalIgnoreCase))
+        {
+            _currentBatchTotal = ExtractFirstInteger(message);
+            SetProgressState(_currentBatchTotal, 0);
+            ProgressTextBlock.Text = _currentBatchTotal == 1
+                ? "Found 1 DWG file. Starting conversion..."
+                : $"Found {_currentBatchTotal} DWG files. Starting conversion...";
+            return;
+        }
+
+        if (message.StartsWith("Done:", StringComparison.OrdinalIgnoreCase))
+        {
+            _currentBatchCompleted++;
+            SetProgressState(_currentBatchTotal, _currentBatchCompleted + _currentBatchFailed);
+            ProgressTextBlock.Text = BuildProgressText();
+            Log(message);
+            return;
+        }
+
+        if (message.StartsWith("Failed", StringComparison.OrdinalIgnoreCase))
+        {
+            _currentBatchFailed++;
+            SetProgressState(_currentBatchTotal, _currentBatchCompleted + _currentBatchFailed);
+            ProgressTextBlock.Text = BuildProgressText();
+            Log(message);
+            return;
+        }
+
+        if (message.StartsWith("No DWG files", StringComparison.OrdinalIgnoreCase) ||
+            message.StartsWith("Conversion finished with missing outputs", StringComparison.OrdinalIgnoreCase))
+        {
+            ProgressTextBlock.Text = message;
+            Log(message);
+            return;
+        }
+
+        if (message.StartsWith("Temp conversion check:", StringComparison.OrdinalIgnoreCase) ||
+            message.StartsWith("Copied ", StringComparison.OrdinalIgnoreCase))
+        {
+            Log(message);
+        }
+    }
+
+    private string BuildProgressText()
+    {
+        if (_currentBatchTotal <= 0)
+        {
+            return "Conversion in progress...";
+        }
+
+        return $"Processed {_currentBatchCompleted + _currentBatchFailed} of {_currentBatchTotal} files. " +
+               $"{_currentBatchCompleted} converted, {_currentBatchFailed} failed.";
+    }
+
+    private static int ExtractFirstInteger(string message)
+    {
+        var digits = new string(message.SkipWhile(c => !char.IsDigit(c))
+            .TakeWhile(char.IsDigit)
+            .ToArray());
+
+        return int.TryParse(digits, out var value) ? value : 0;
     }
 
     private void Log(string message)
@@ -333,6 +464,9 @@ public partial class MainWindow : Window
         var line = $"[{DateTime.Now:HH:mm:ss}] {message}";
         LogListBox.Items.Insert(0, line);
     }
+
+    private string GetAllLogText() =>
+        string.Join(Environment.NewLine, LogListBox.Items.Cast<object>().Select(item => item?.ToString()));
 
     private static string? BrowseForFolder(string currentPath)
     {

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DWGToNWCConverter")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+55216d47a26cd08ffe22d2e2c4caffc0840bec5d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7126842210326ad41ae1017f8e6f09c8c0c02909")]
 [assembly: System.Reflection.AssemblyProductAttribute("DWGToNWCConverter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DWGToNWCConverter")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

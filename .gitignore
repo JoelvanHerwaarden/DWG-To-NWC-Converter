@@ -1,4 +1,5 @@
 *.vsidx
 *.cs
 *.cache
-.vs/DWGToNWCConverter.slnx/FileContentIndex/3e01b5cf-fbe1-4872-93a8-469fcbec5046.vsidx
+*.backup.json
+*.suo

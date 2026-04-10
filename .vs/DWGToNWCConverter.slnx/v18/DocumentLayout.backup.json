@@ -7,12 +7,20 @@
       "RelativeMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|solutionrelative:mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|c:\\users\\jo\u00EBlvanherwaarden\\documents\\github\\dwgtonwcconverter\\dwgtonwcconverter.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
-      "RelativeMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|solutionrelative:dwgtonwcconverter.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
+      "AbsoluteMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|c:\\users\\jo\u00EBlvanherwaarden\\documents\\github\\dwgtonwcconverter\\conversionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|solutionrelative:conversionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|c:\\users\\jo\u00EBlvanherwaarden\\documents\\github\\dwgtonwcconverter\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|solutionrelative:mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|c:\\users\\jo\u00EBlvanherwaarden\\documents\\github\\dwgtonwcconverter\\dwgtonwcconverter.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|solutionrelative:dwgtonwcconverter.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|c:\\users\\jo\u00EBlvanherwaarden\\documents\\github\\dwgtonwcconverter\\dwgtonwcconverter.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
+      "RelativeMoniker": "D:0:0:{9D8FB5D7-066B-1880-3CE4-410053ADE287}|DWGToNWCConverter.csproj|solutionrelative:dwgtonwcconverter.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -30,27 +38,28 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "DWGToNWCConverter",
-              "DocumentMoniker": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\DWGToNWCConverter.csproj",
-              "RelativeDocumentMoniker": "DWGToNWCConverter.csproj",
-              "ToolTip": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\DWGToNWCConverter.csproj",
-              "RelativeToolTip": "DWGToNWCConverter.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-04-10T08:32:11.055Z",
+              "DocumentIndex": 1,
+              "Title": "ConversionService.cs",
+              "DocumentMoniker": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\ConversionService.cs",
+              "RelativeDocumentMoniker": "ConversionService.cs",
+              "ToolTip": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\ConversionService.cs",
+              "RelativeToolTip": "ConversionService.cs",
+              "ViewState": "AgIAAHEAAAAAAAAAAAAmwLkAAAALAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-10T10:38:24.274Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "DWGToNWCConverter",
-              "DocumentMoniker": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\DWGToNWCConverter.csproj",
-              "RelativeDocumentMoniker": "DWGToNWCConverter.csproj",
-              "ToolTip": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\DWGToNWCConverter.csproj",
-              "RelativeToolTip": "DWGToNWCConverter.csproj",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-04-10T08:45:28.326Z",
+              "DocumentIndex": 2,
+              "Title": "MainWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\MainWindow.xaml.cs",
+              "RelativeDocumentMoniker": "MainWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\MainWindow.xaml.cs",
+              "RelativeToolTip": "MainWindow.xaml.cs",
+              "ViewState": "AgIAAEUAAAAAAAAAAAAIwFwAAAA0AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-10T10:37:58.94Z",
               "EditorCaption": ""
             },
             {
@@ -62,8 +71,31 @@
               "ToolTip": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\MainWindow.xaml*",
               "RelativeToolTip": "MainWindow.xaml*",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2026-04-10T08:18:28.822Z",
+              "WhenOpened": "2026-04-10T09:21:41.835Z",
               "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "DWGToNWCConverter.csproj",
+              "DocumentMoniker": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\DWGToNWCConverter.csproj",
+              "RelativeDocumentMoniker": "DWGToNWCConverter.csproj",
+              "ToolTip": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\DWGToNWCConverter.csproj",
+              "RelativeToolTip": "DWGToNWCConverter.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-04-10T08:32:11.055Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "DWGToNWCConverter",
+              "DocumentMoniker": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\DWGToNWCConverter.csproj",
+              "RelativeDocumentMoniker": "DWGToNWCConverter.csproj",
+              "ToolTip": "C:\\Users\\Jo\u00EBlvanHerwaarden\\Documents\\Github\\DWGToNWCConverter\\DWGToNWCConverter.csproj",
+              "RelativeToolTip": "DWGToNWCConverter.csproj",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-04-10T08:45:28.326Z"
             }
           ]
         }
