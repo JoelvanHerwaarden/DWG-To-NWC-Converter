@@ -44,19 +44,22 @@ C:\Program Files\Autodesk\Navisworks Manage 2024\FiletoolsTaskRunner.exe
 
 ## <img src="docs/icons/start.svg" alt="" width="22" valign="middle" /> Getting Started
 
-Build the application:
+The main way to use this app is by downloading the packaged executable from the GitHub Releases page.
 
-```powershell
-dotnet build
-```
+Recommended for end users:
 
-Run it from the project folder:
+1. Open the repository's `Releases` page on GitHub.
+2. Download the latest packaged app or `.exe`.
+3. Start the application on a Windows machine that has Autodesk Navisworks Manage installed.
+4. Configure the folders and Navisworks tool path in the app.
+
+If someone wants to run the project from source instead, they can:
 
 ```powershell
 dotnet run
 ```
 
-The project targets:
+The project target is:
 
 ```text
 net8.0-windows
